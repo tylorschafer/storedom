@@ -82,7 +82,7 @@ describe "ActiveRecord American Gladiator" do
   end
 
   context "Breakthrough and Conquer" do
-    xit "returns all orders with Footballs and Wrestling Rings" do
+    it "returns all orders with Footballs and Wrestling Rings" do
       wrestling_ring = Item.create(name: "Wrestling Ring")
       football       = Item.create(name: "Football")
       sweat          = Item.create(name: "Sweat")
@@ -94,7 +94,8 @@ describe "ActiveRecord American Gladiator" do
       # orders = Order.all.select do |order|
       #   order.items.include?(football) || order.items.include?(wrestling_ring)
       # end
-      orders = Order.joins(:items).where('item.name == football or name == wrestling_ring')
+      orders = Order.joins(:items)
+                    .where(order_items: {item: [wrestling_ring, football]})
       # Changeable End
 
       # Hint: Take a look at the `Joins` section and the example that combines `joins` and `where` here: http://apidock.com/rails/ActiveRecord/QueryMethods/where
@@ -104,7 +105,7 @@ describe "ActiveRecord American Gladiator" do
   end
 
   context "The Eliminator" do
-    xit "returns all orders placed 2 weeks ago" do
+    it "returns all orders placed 2 weeks ago" do
       last_week = Date.today.last_week
       two_weeks_ago = Date.today.last_week - 7.days
 
@@ -118,9 +119,8 @@ describe "ActiveRecord American Gladiator" do
       # orders = Order.all.select do |order|
       #   order.created_at >= two_weeks_ago && order.created_at <= last_week
       # end
-      orders = Order.where("created_at >= #{two_weeks_ago} and created_at <= #{last_week}")
+      orders = Order.where(created_at: two_weeks_ago..last_week)
       # Changeable End
-
       expect(orders).to eq([order_1, order_3, order_5])
     end
   end
@@ -138,7 +138,11 @@ describe "ActiveRecord American Gladiator" do
 
       # Changeable Start
 
-      most_popular_items = Item.joins(:orders).select("*, order_items.item_id as item_count").group("items.id").order('item_count DESC').limit(2)
+      most_popular_items = Item.joins(:orders)
+                               .select("*, order_items.item_id as item_count")
+                               .group("items.id")
+                               .order('item_count DESC')
+                               .limit(2)
       # items_with_count = Hash.new(0)
       #
       # Order.all.each do |order|
