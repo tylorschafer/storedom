@@ -42,19 +42,19 @@ describe "ActiveRecord American Gladiator" do
       order_4 = laser.orders.create(amount: 4)
 
 
-      order_amounts = []
+      # order_amounts = []
 
       # Changeable Start
-      users = User.first(3)
+      order_amounts = User.joins(:orders).order('users.id').pluck(:amount).first(3)
       # Changeable End
 
       # Use eager loading to remove the N+1 query
       # Hint: Read until section 13.1 - http://guides.rubyonrails.org/active_record_querying.html#eager-loading-associations
 
-      users.each do |user|
-        # The problem: Each time we call user.orders, we go to the DB to pull them down.
-        order_amounts << user.orders.first.amount
-      end
+      # users.each do |user|
+      #   # The problem: Each time we call user.orders, we go to the DB to pull them down.
+      #   order_amounts << user.orders.first.amount
+      # end
 
       expect(order_amounts).to eq([1, 2, 4])
       expect(order_amounts).to_not include(3)
@@ -62,7 +62,7 @@ describe "ActiveRecord American Gladiator" do
   end
 
   context "The Maze" do
-    xit "returns all users that have placed an order" do
+    it "returns all users that have placed an order" do
       gemini = User.create(name: "Gemini")
       sky    = User.create(name: "Sky")
       nitro  = User.create(name: "Nitro")
@@ -72,9 +72,7 @@ describe "ActiveRecord American Gladiator" do
       nitro.orders.create
 
       # Changeable Start
-      active_users = User.all.select do |user|
-        user.orders.present?
-      end
+      active_users = User.joins(:orders).distinct
       # Changeable End
 
       # Hint: http://guides.rubyonrails.org/active_record_querying.html#joining-tables
@@ -93,9 +91,10 @@ describe "ActiveRecord American Gladiator" do
       order_3        = Order.create(items: [football])
 
       # Changeable Start
-      orders = Order.all.select do |order|
-        order.items.include?(football) || order.items.include?(wrestling_ring)
-      end
+      # orders = Order.all.select do |order|
+      #   order.items.include?(football) || order.items.include?(wrestling_ring)
+      # end
+      orders = Order.joins(:items).where('item.name == football or name == wrestling_ring')
       # Changeable End
 
       # Hint: Take a look at the `Joins` section and the example that combines `joins` and `where` here: http://apidock.com/rails/ActiveRecord/QueryMethods/where
@@ -116,9 +115,10 @@ describe "ActiveRecord American Gladiator" do
       order_5 = Order.create(created_at: two_weeks_ago + 2.days)
 
       # Changeable Start
-      orders = Order.all.select do |order|
-        order.created_at >= two_weeks_ago && order.created_at <= last_week
-      end
+      # orders = Order.all.select do |order|
+      #   order.created_at >= two_weeks_ago && order.created_at <= last_week
+      # end
+      orders = Order.where("created_at >= #{two_weeks_ago} and created_at <= #{last_week}")
       # Changeable End
 
       expect(orders).to eq([order_1, order_3, order_5])
@@ -127,7 +127,7 @@ describe "ActiveRecord American Gladiator" do
 
   context "Atlasphere" do
     # This one is challenging.
-    xit "returns most popular items" do
+    it "returns most popular items" do
       scoring_pod = Item.create(name: "Scoring Pod")
       lights      = Item.create(name: "Lights")
       smoke       = Item.create(name: "Smoke")
@@ -137,23 +137,27 @@ describe "ActiveRecord American Gladiator" do
       Order.create(items: [lights, lights, lights])
 
       # Changeable Start
-      items_with_count = Hash.new(0)
 
-      Order.all.each do |order|
-        order.items.each do |item|
-          items_with_count[item.id] += 1
-        end
-      end
+      most_popular_items = Item.joins(:orders).select("*, order_items.item_id as item_count").group("items.id").order('item_count DESC').limit(2)
+      # items_with_count = Hash.new(0)
+      #
+      # Order.all.each do |order|
+      #   order.items.each do |item|
+      #     items_with_count[item.id] += 1
+      #   end
+      # end
+      #
+      # top_items_with_count = items_with_count.sort_by { |item_id, count|
+      #   count
+      # }.reverse.first(2)
+      #
+      # top_item_ids = top_items_with_count.first.zip(top_items_with_count.last).first
+      #
+      # most_popular_items = top_item_ids.map do |id|
+      #   Item.find(id)
+      # end
 
-      top_items_with_count = items_with_count.sort_by { |item_id, count|
-        count
-      }.reverse.first(2)
 
-      top_item_ids = top_items_with_count.first.zip(top_items_with_count.last).first
-
-      most_popular_items = top_item_ids.map do |id|
-        Item.find(id)
-      end
       # Changeable Stop
 
       # Hints: http://apidock.com/rails/ActiveRecord/QueryMethods/select
